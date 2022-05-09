@@ -1,14 +1,16 @@
+#모델 구조
 # -*- coding: utf-8 -*-
 import torch
 import torch.nn as nn
-from .function import conv2d, deconv2d, lrelu, fc, embedding_lookup
+import torch.nn.functional as F
+#from .function import conv2d, deconv2d, lrelu, fc, embedding_lookup
 import warnings
 warnings.filterwarnings("ignore")
 
 
 def Generator(images, En, De, embeddings, embedding_ids, GPU=False, encode_layers=False):
     encoded_source, encode_layers = En(images)
-    local_embeddings = embedding_lookup(embeddings, embedding_ids, GPU=GPU)
+    local_embeddings = F.embedding_lookup(embeddings, embedding_ids, GPU=GPU)
     if GPU:
         encoded_source = encoded_source.cuda()
         local_embeddings = local_embeddings.cuda()
@@ -24,14 +26,14 @@ class Encoder(nn.Module):
     
     def __init__(self, img_dim=1, conv_dim=64):
         super(Encoder, self).__init__()
-        self.conv1 = conv2d(img_dim, conv_dim, k_size=5, stride=2, pad=2, dilation=2, lrelu=False, bn=False)
-        self.conv2 = conv2d(conv_dim, conv_dim*2, k_size=5, stride=2, pad=2, dilation=2)
-        self.conv3 = conv2d(conv_dim*2, conv_dim*4, k_size=4, stride=2, pad=1, dilation=1)
-        self.conv4 = conv2d(conv_dim*4, conv_dim*8)
-        self.conv5 = conv2d(conv_dim*8, conv_dim*8)
-        self.conv6 = conv2d(conv_dim*8, conv_dim*8)
-        self.conv7 = conv2d(conv_dim*8, conv_dim*8)
-        self.conv8 = conv2d(conv_dim*8, conv_dim*8)
+        self.conv1 = F.conv2d(img_dim, conv_dim, k_size=5, stride=2, pad=2, dilation=2, lrelu=False, bn=False)
+        self.conv2 = F.conv2d(conv_dim, conv_dim*2, k_size=5, stride=2, pad=2, dilation=2)
+        self.conv3 = F.conv2d(conv_dim*2, conv_dim*4, k_size=4, stride=2, pad=1, dilation=1)
+        self.conv4 = F.conv2d(conv_dim*4, conv_dim*8)
+        self.conv5 = F.conv2d(conv_dim*8, conv_dim*8)
+        self.conv6 = F.conv2d(conv_dim*8, conv_dim*8)
+        self.conv7 = F.conv2d(conv_dim*8, conv_dim*8)
+        self.conv8 = F.conv2d(conv_dim*8, conv_dim*8)
     
     def forward(self, images):
         encode_layers = dict()
@@ -60,14 +62,14 @@ class Decoder(nn.Module):
     
     def __init__(self, img_dim=1, embedded_dim=640, conv_dim=64):
         super(Decoder, self).__init__()
-        self.deconv1 = deconv2d(embedded_dim, conv_dim*8, dropout=True)
-        self.deconv2 = deconv2d(conv_dim*16, conv_dim*8, dropout=True, k_size=4)
-        self.deconv3 = deconv2d(conv_dim*16, conv_dim*8, k_size=5, dilation=2, dropout=True)
-        self.deconv4 = deconv2d(conv_dim*16, conv_dim*8, k_size=4, dilation=2, stride=2)
-        self.deconv5 = deconv2d(conv_dim*16, conv_dim*4, k_size=4, dilation=2, stride=2)
-        self.deconv6 = deconv2d(conv_dim*8, conv_dim*2, k_size=4, dilation=2, stride=2)
-        self.deconv7 = deconv2d(conv_dim*4, conv_dim*1, k_size=4, dilation=2, stride=2)
-        self.deconv8 = deconv2d(conv_dim*2, img_dim, k_size=4, dilation=2, stride=2, bn=False)
+        self.deconv1 = F.deconv2d(embedded_dim, conv_dim*8, dropout=True)
+        self.deconv2 = F.deconv2d(conv_dim*16, conv_dim*8, dropout=True, k_size=4)
+        self.deconv3 = F.deconv2d(conv_dim*16, conv_dim*8, k_size=5, dilation=2, dropout=True)
+        self.deconv4 = F.deconv2d(conv_dim*16, conv_dim*8, k_size=4, dilation=2, stride=2)
+        self.deconv5 = F.deconv2d(conv_dim*16, conv_dim*4, k_size=4, dilation=2, stride=2)
+        self.deconv6 = F.deconv2d(conv_dim*8, conv_dim*2, k_size=4, dilation=2, stride=2)
+        self.deconv7 = F.deconv2d(conv_dim*4, conv_dim*1, k_size=4, dilation=2, stride=2)
+        self.deconv8 = F.deconv2d(conv_dim*2, img_dim, k_size=4, dilation=2, stride=2, bn=False)
     
     
     def forward(self, embedded, encode_layers):
@@ -95,12 +97,12 @@ class Decoder(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, category_num, img_dim=2, disc_dim=64):
         super(Discriminator, self).__init__()
-        self.conv1 = conv2d(img_dim, disc_dim, bn=False)
-        self.conv2 = conv2d(disc_dim, disc_dim*2)
-        self.conv3 = conv2d(disc_dim*2, disc_dim*4)
-        self.conv4 = conv2d(disc_dim*4, disc_dim*8)
-        self.fc1 = fc(disc_dim*8*8*8, 1)
-        self.fc2 = fc(disc_dim*8*8*8, category_num)
+        self.conv1 = F.conv2d(img_dim, disc_dim, bn=False)
+        self.conv2 = F.onv2d(disc_dim, disc_dim*2)
+        self.conv3 = F.conv2d(disc_dim*2, disc_dim*4)
+        self.conv4 = F.conv2d(disc_dim*4, disc_dim*8)
+        self.fc1 = F.fc(disc_dim*8*8*8, 1)
+        self.fc2 = F.fc(disc_dim*8*8*8, category_num)
         
     def forward(self, images):
         batch_size = images.shape[0]
