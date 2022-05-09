@@ -6,11 +6,16 @@ import torch
 import torch.nn as nn
 from torchvision.utils import save_image
 
-from machine_learning.dataset import TrainDataProvider
-from machine_learning.function import init_embedding
-from machine_learning.model import Encoder, Decoder, Discriminator, Generator
-from machine_learning.utils import denorm_image, centering_image
-
+import dataset
+import function
+import model
+import utils
+'''
+from train.dataset import TrainDataProvider
+from train.function import init_embedding
+from train.model import Encoder, Decoder, Discriminator, Generator
+from train.utils import denorm_image, centering_image
+'''
 
 class Trainer:
     
@@ -30,7 +35,7 @@ class Trainer:
         self.fixed_target = torch.load(os.path.join(fixed_dir, 'fixed_target.pkl'))
         self.fixed_label = torch.load(os.path.join(fixed_dir, 'fixed_label.pkl'))
         
-        self.data_provider = TrainDataProvider(self.data_dir)
+        self.data_provider = dataset.TrainDataProvider(self.data_dir)
         self.total_batches = self.data_provider.compute_total_batch_num(self.batch_size)
         print("total batches:", self.total_batches)
 
@@ -47,9 +52,9 @@ class Trainer:
             L1_penalty, Lconst_penalty = 500, 1000
 
         # Get Models
-        En = Encoder()
-        De = Decoder()
-        D = Discriminator(category_num=self.fonts_num)
+        En = model.Encoder()
+        De = model.Decoder()
+        D = model.Discriminator(category_num=self.fonts_num)
         if self.GPU:
             En.cuda()
             De.cuda()
@@ -126,14 +131,14 @@ class Trainer:
                 # centering
                 for idx, (image_S, image_T) in enumerate(zip(real_source, real_target)):
                     image_S = image_S.cpu().detach().numpy().reshape(self.img_size, self.img_size)
-                    image_S = centering_image(image_S, resize_fix=90)
+                    image_S = utils.centering_image(image_S, resize_fix=90)
                     real_source[idx] = torch.tensor(image_S).view([1, self.img_size, self.img_size])
                     image_T = image_T.cpu().detach().numpy().reshape(self.img_size, self.img_size)
-                    image_T = centering_image(image_T, resize_fix=resize_fix)
+                    image_T = utils.centering_image(image_T, resize_fix=resize_fix)
                     real_target[idx] = torch.tensor(image_T).view([1, self.img_size, self.img_size])
 
                 # generate fake image form source image
-                fake_target, encoded_source, _ = Generator(real_source, En, De, \
+                fake_target, encoded_source, _ = model.Generator(real_source, En, De, \
                                                            self.embeddings, embedding_ids, \
                                                            GPU=self.GPU, encode_layers=True)
 
@@ -210,7 +215,7 @@ class Trainer:
                 if (i+1) % sample_step == 0:
                     fixed_fake_images = Generator(self.fixed_source, En, De, \
                                                   self.embeddings, self.fixed_label, GPU=self.GPU)[0]
-                    save_image(denorm_image(fixed_fake_images.data), \
+                    save_image(utils.denorm_image(fixed_fake_images.data), \
                                os.path.join(save_path, 'fake_samples-%d-%d.png' % \
                                             (int(prev_epoch)+epoch+1, i+1)), \
                                nrow=save_nrow, pad_value=255)
@@ -276,10 +281,10 @@ def interpolation(data_provider, grids, fixed_char_ids, interpolated_font_ids, e
 
             for idx, (image_S, image_T) in enumerate(zip(real_sources, real_targets)):
                 image_S = image_S.cpu().detach().numpy().reshape(img_size, img_size)
-                image_S = centering_image(image_S, resize_fix=100)
+                image_S = utils.centering_image(image_S, resize_fix=100)
                 real_sources[idx] = torch.tensor(image_S).view([1, img_size, img_size])
                 image_T = image_T.cpu().detach().numpy().reshape(img_size, img_size)
-                image_T = centering_image(image_T, resize_fix=100)
+                image_T = utils.centering_image(image_T, resize_fix=100)
                 real_targets[idx] = torch.tensor(image_T).view([1, img_size, img_size])
                 
             encoded_source, encode_layers = En(real_sources)
@@ -327,7 +332,7 @@ def interpolation(data_provider, grids, fixed_char_ids, interpolated_font_ids, e
                 file_path = '%s_from_%s_to_%s_grid_%s.png' % (idx, font_from, font_to, grid_idx)
 
                 # save
-                save_image(denorm_image(image.data), \
+                save_image(utils.denorm_image(image.data), \
                            os.path.join(save_path, file_path), \
                            nrow=save_nrow, pad_value=255)
     

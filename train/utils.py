@@ -11,7 +11,6 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 from scipy.misc import imresize
-
 import matplotlib.pyplot as plt
 
 

@@ -6,19 +6,21 @@ import numpy as np
 import random
 import os
 import torch
-from .utils import pad_seq, bytes_to_file, read_split_image, round_function
-from .utils import shift_and_resize_image, normalize_image, centering_image
-
+import utils
+'''
+from utils import pad_seq, bytes_to_file, read_split_image, round_function
+from utils import shift_and_resize_image, normalize_image, centering_image
+'''
 
 def get_batch_iter(examples, batch_size, augment, with_charid=False):
     # the transpose ops requires deterministic
     # batch size, thus comes the padding
-    padded = pad_seq(examples, batch_size)
+    padded = utils.pad_seq(examples, batch_size)
 
     def process(img):
-        img = bytes_to_file(img)
+        img = utils.bytes_to_file(img)
         try:
-            img_A, img_B = read_split_image(img)
+            img_A, img_B = utils.read_split_image(img)
             if augment:
                 # augment the image by:
                 # 1) enlarge the image
@@ -32,11 +34,11 @@ def get_batch_iter(examples, batch_size, augment, with_charid=False):
                 nh = int(multiplier * h) + 1
                 shift_x = int(np.ceil(np.random.uniform(0.01, nw - w)))
                 shift_y = int(np.ceil(np.random.uniform(0.01, nh - h)))
-                img_A = shift_and_resize_image(img_A, shift_x, shift_y, nw, nh)
-                img_B = shift_and_resize_image(img_B, shift_x, shift_y, nw, nh)
-            img_A = normalize_image(img_A)
+                img_A = utils.shift_and_resize_image(img_A, shift_x, shift_y, nw, nh)
+                img_B = utils.shift_and_resize_image(img_B, shift_x, shift_y, nw, nh)
+            img_A = utils.normalize_image(img_A)
             img_A = img_A.reshape(1, len(img_A), len(img_A[0]))
-            img_B = normalize_image(img_B)
+            img_B = utils.normalize_image(img_B)
             img_B = img_B.reshape(1, len(img_B), len(img_B[0]))
             return np.concatenate([img_A, img_B], axis=0)
         finally:
@@ -173,12 +175,12 @@ def save_fixed_sample(sample_size, img_size, data_dir, save_dir, \
         # centering
         for idx, (image_S, image_T) in enumerate(zip(fixed_source, fixed_target)):
             image_S = image_S.cpu().detach().numpy().reshape(img_size, img_size)
-            image_S = np.array(list(map(round_function, image_S.flatten()))).reshape(128, 128)
-            image_S = centering_image(image_S, resize_fix=90)
+            image_S = np.array(list(map(utils.round_function, image_S.flatten()))).reshape(128, 128)
+            image_S = utils.centering_image(image_S, resize_fix=90)
             fixed_source[idx] = torch.tensor(image_S).view([1, img_size, img_size])
             image_T = image_T.cpu().detach().numpy().reshape(img_size, img_size)
-            image_T = np.array(list(map(round_function, image_T.flatten()))).reshape(128, 128)
-            image_T = centering_image(image_T, resize_fix=resize_fix)
+            image_T = np.array(list(map(utils.round_function, image_T.flatten()))).reshape(128, 128)
+            image_T = utils.centering_image(image_T, resize_fix=resize_fix)
             fixed_target[idx] = torch.tensor(image_T).view([1, img_size, img_size])
 
         fixed_label = np.array(font_ids)
